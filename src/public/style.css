@@ -1,0 +1,7 @@
+.button-container {
+  display: grid;
+  justify-content: center;
+  width: 80%;
+  grid-column: 1fr;
+  grid-row-gap: 2em;
+}

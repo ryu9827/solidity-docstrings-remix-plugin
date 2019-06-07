@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <link rel="stylesheet" type="text/css" href="style.css" />
+    <title>Hello World Plugin</title>
+  </head>
+  <body>
+    <!-- <style type="text/css" media="screen">
+      .button-container {
+        display: grid;
+        grid-column: 1fr;
+      }
+    </style> -->
+    <!-- Remix Plugin inject boostrap theme by default -->
+    <div class="button-container">
+      <button class="btn btn-warning" onclick="addForPragma()">
+        Contract add docstrings
+      </button>
+      <button class="btn btn-primary" onclick="addForContract()">
+        Contract add docstrings
+      </button>
+      <button class="btn btn-success" onclick="addForConstructor()">
+        Constructor add docstrings
+      </button>
+      <button class="btn btn-info" onclick="addForFunction()">
+        Functions add docstrings
+      </button>
+      <button class="btn btn-secondary" onclick="addForFallback()">
+        Fallback add docstrings
+      </button>
+    </div>
+
+    <script src="https://unpkg.com/remix-plugin"></script>
+    <script>
+      const { createIframeClient } = remixPlugin;
+      const client = createIframeClient({
+        devMode: { port: 8080 }
+      });
+      async function showHelloWorld() {
+        console.log(client);
+        await client.onload(); // Wait for connection
+        client.call(
+          "fileManager",
+          "setFile",
+          "browser/hello-world",
+          "Hellow, world"
+        );
+      }
+
+      async function addForContract() {
+        await client.onload();
+        client
+          .call("fileManager", "getCurrentFile")
+          .then(fileName => client.call("fileManager", "getFile", fileName))
+          .then(fileContent => {
+            let arrFileContent;
+            arr = fileContent.split("\n");
+            console.log(arr);
+          });
+      }
+
+      // async function
+    </script>
+  </body>
+</html>
