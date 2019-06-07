@@ -1,0 +1,1 @@
+solidity-docstrings-remix-plugin
