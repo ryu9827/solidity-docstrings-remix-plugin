@@ -16,19 +16,19 @@
     </style> -->
     <!-- Remix Plugin inject boostrap theme by default -->
     <div class="button-container">
-      <button class="btn btn-warning" onclick="addForPragma()">
+      <button class="btn btn-warning" onclick="addDocstring(`pragma solidity`)">
+        Pragma add docstrings
+      </button>
+      <button class="btn btn-primary" onclick="addDocstring(`contract `)">
         Contract add docstrings
       </button>
-      <button class="btn btn-primary" onclick="addForContract()">
-        Contract add docstrings
-      </button>
-      <button class="btn btn-success" onclick="addForConstructor()">
+      <button class="btn btn-success" onclick="addDocstring(`constructor`)">
         Constructor add docstrings
       </button>
-      <button class="btn btn-info" onclick="addForFunction()">
+      <button class="btn btn-info" onclick="addDocstring(`function`)">
         Functions add docstrings
       </button>
-      <button class="btn btn-secondary" onclick="addForFallback()">
+      <button class="btn btn-secondary" onclick="addDocstring(`function ()`)">
         Fallback add docstrings
       </button>
     </div>
@@ -39,30 +39,145 @@
       const client = createIframeClient({
         devMode: { port: 8080 }
       });
-      async function showHelloWorld() {
-        console.log(client);
-        await client.onload(); // Wait for connection
-        client.call(
-          "fileManager",
-          "setFile",
-          "browser/hello-world",
-          "Hellow, world"
-        );
-      }
+      const FunctionDocstings = ["/**", " *@dev: ", "*/"];
+      const ConstantDocstrings = new Map([
+        [
+          "pragma solidity",
+          ["/**", " *Created on: ", " *@Summary: ", " *@Author: ", " */"]
+        ],
+        ["contract ", ["/**", " *@title:", " */"]],
+        ["function ()", ["/**", " *@dev: fallback function. ", " */"]]
+      ]);
 
-      async function addForContract() {
+      async function addDocstring(keyword) {
         await client.onload();
+        const fileName = await client.call("fileManager", "getCurrentFile");
         client
-          .call("fileManager", "getCurrentFile")
-          .then(fileName => client.call("fileManager", "getFile", fileName))
+          .call("fileManager", "getFile", fileName)
           .then(fileContent => {
-            let arrFileContent;
-            arr = fileContent.split("\n");
-            console.log(arr);
-          });
+            console.log(fileContent);
+            if (ConstantDocstrings.has(keyword)) {
+              return addConstantDocstrings(fileContent.split("\n"), keyword);
+            } else if (keyword === "function" || keyword === "constructor") {
+              return addVaryingDocstrings(fileContent.split("\n"), keyword);
+            } else {
+              //this path means the entered keyword is not recognized
+              return fileContent;
+            }
+          })
+          .then(newContent => {
+            console.log(newContent);
+            return client.call("fileManager", "setFile", fileName, newContent);
+          })
+          .catch(error => console.log(error));
       }
 
-      // async function
+      // @dev this is a function for adding docstring to 'pragma solidity', 'contract ', and 'function ()’
+      // @param array, the file content
+      // @param keyword, it can be one of them in ['pragma solidity', 'contract ', 'function ()’]
+      // @param docstrings, the docstrings will be added to the content
+      function addConstantDocstrings(array, keyword) {
+        let index = -1; //the keyword index in the array
+        for (let i = 0; i < array.length; i++) {
+          const element = array[i];
+
+          if (element.includes(keyword) && !hasDocstrings(array, i)) {
+            index = i;
+            break;
+          }
+        }
+        if (index === -1) {
+          return array.reduce((a, b) => a + "\n" + b); //if index === -1, it means the keyword is not included in the file content
+        }
+        return [
+          ...array.slice(0, index),
+          ...ConstantDocstrings.get(keyword),
+          ...array.slice(index)
+        ].reduce((a, b) => a + "\n" + b);
+      }
+
+      // @dev this is a function for adding docstring to 'constructor' and 'function'
+      // @param array, the file content
+      // @param keyword, it can be one of them in ['constructor', 'function']
+      function addVaryingDocstrings(array, keyword) {
+        let index = -1;
+        for (let i = 0; i < array.length; i++) {
+          const element = array[i];
+          if (element.includes(keyword) && !hasDocstrings(array, i)) {
+            index = i;
+            break;
+          }
+        }
+        if (index === -1) {
+          return array.reduce((a, b) => a + "\n" + b); //if index === -1, it means the keyword is not included in the file content
+        }
+        // get param names and store in an array
+        let string = array[index];
+        for (let i = index; i < array.length; i++) {
+          if (string.includes("(") && string.includes(")")) {
+            break;
+          } else {
+            string += array[i + 1];
+          }
+        }
+        const paramStart = string.indexOf("(");
+        const paramEnd = string.indexOf(")");
+        paramArray = string
+          .substring(paramStart + 1, paramEnd)
+          .split(",")
+          .map(item => " *@param " + item.trim() + ": ");
+
+        // insert param names array into docstrings
+        let docstrings = [
+          FunctionDocstings[0],
+          FunctionDocstings[1],
+          ...paramArray,
+          FunctionDocstings[2]
+        ];
+
+        // whether 'returns' keyword exist in this function
+        let functionDeclaration = array[index];
+        for (let i = index; i < array.length; i++) {
+          if (functionDeclaration.includes("{")) {
+            break;
+          } else {
+            functionDeclaration += array[i + 1];
+          }
+        }
+
+        const returnsIndex = functionDeclaration.indexOf("returns");
+        functionDeclaration = functionDeclaration.substring(returnsIndex);
+        const returnsStart = functionDeclaration.indexOf("(");
+        const returnsEnd = functionDeclaration.indexOf(")");
+        const returnsArray = functionDeclaration
+          .substring(returnsStart + 1, returnsEnd)
+          .split(",")
+          .map(item => " *@return " + item.trim() + ": ");
+
+        // insert returns to docstrings
+        const length = docstrings.length;
+        if (functionDeclaration.includes("returns")) {
+          docstrings = [
+            ...docstrings.slice(0, length - 1),
+            ...returnsArray,
+            docstrings[docstrings.length - 1]
+          ];
+        }
+        // insert whole docstrings into file content and return
+        return [
+          ...array.slice(0, index),
+          ...docstrings,
+          ...array.slice(index)
+        ].reduce((a, b) => a + "\n" + b);
+      }
+
+      //------------ utils ---------------//
+      //@dev this function is to use to check if an element at index in the array already has docstrings in front.
+      function hasDocstrings(arr, index) {
+        if (index === 0) return false; //avoid under border exception.
+        if (arr[index - 1].includes("*/")) return true;
+        return false;
+      }
     </script>
   </body>
 </html>
