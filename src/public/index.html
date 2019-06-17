@@ -15,10 +15,15 @@
       }
     </style> -->
     <!-- Remix Plugin inject boostrap theme by default -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+  </body>
     <div class="button-container">
-      <button class="btn btn-danger" onclick="addAllDocstrings()">
+      <button class="btn btn-danger capitalize" onclick="addAllDocstrings()">
         add docstrings to all keywords
       </button>
+      <p class="hr capitalize">add docstrings to one keyword </p>
       <button
         class="btn btn-warning"
         onclick="addOneDocstring(`pragma solidity`)"
@@ -41,9 +46,50 @@
         Fallback add docstrings
       </button>
     </div>
+    <br><br>
+
+    <div class="popup-message">
+        <!-- <p class="hr">Message Area</p> -->
+        <div
+          class="alert alert-success alert-dismissible fade show"
+          role="alert"
+        >
+          <h4 class="alert-heading">File Content Not Changed!</h4>
+          <p>
+            Your current file content is not changed by the plagin. The reason
+            could be following:
+          </p>
+          <ul>
+            <li>
+              The plugin only looks for the keyword from ["pragma solidity",
+              "contract ", "constructor ", "function ", "function ()"]
+            </li>
+            <li>
+              You cancel content altering before it finished.
+            </li>
+            <li>
+              Other reasons?
+            </li>
+          </ul>
+          <button
+            type="button"
+            class="close"
+            aria-label="Close"
+            id="closeButton"
+            >
+            <!-- class="close"
+            data-dismiss="alert"
+            aria-label="Close" -->
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+      </div>
 
     <script src="https://unpkg.com/remix-plugin"></script>
     <script>
+      const showPopupMessage = ()=>{document.querySelector(".popup-message").style.display = "block"};
+      const hidePopupMessage = ()=>{document.querySelector(".popup-message").style.display = "none"};
+      document.querySelector('#closeButton').addEventListener("click",()=>hidePopupMessage())
       const { createIframeClient } = remixPlugin;
       const client = createIframeClient({
         devMode: { port: 8080 }
@@ -74,6 +120,8 @@
           })
           .then(newContent => {
             if (newContent === originalContent) {
+              console.log("The content doesn't change.");
+              showPopupMessage()
               return;
             } else {
               return client.call(
@@ -111,6 +159,7 @@
           .then(newContent => {
             if (originalContent === newContent) {
               console.log("The content doesn't change.");
+              showPopupMessage()
               return;
             } else {
               return client.call(
