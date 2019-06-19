@@ -149,7 +149,7 @@
           .then(fileContent => {
             if (ConstantDocstrings.has(keyword)) {
               return addConstantDocstrings(fileContent, keyword);
-            } else if (keyword === "function" || keyword === "constructor") {
+            } else if (keyword === "function " || keyword === "constructor") {
               return addVaryingDocstrings(fileContent, keyword);
             } else {
               //this path means the entered keyword is not recognized
