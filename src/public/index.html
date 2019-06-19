@@ -208,9 +208,9 @@
         return arrayToContent(array);
       }
 
-      // @dev this is a function for adding docstring to 'constructor' and 'function'
+      // @dev this is a function for adding docstring to 'constructor' and 'function '
       // @param array, the file content
-      // @param keyword, it can be one of them in ['constructor', 'function']
+      // @param keyword, it can be one of them in ['constructor', 'function ']
       function addVaryingDocstrings(fileString, keyword) {
         const originalArray = fileString.split("\n");
         let array = originalArray;
@@ -218,7 +218,8 @@
         let index = -1;
         for (let i = 0; i < array.length; i++) {
           const element = array[i];
-          if (element.includes(keyword) && !hasDocstrings(array, i)) {
+          //varying docstrings only adds to function, not Fallback function, that's why we need to check !element.includes('function ()')
+          if (element.includes(keyword) && !element.includes('function ()') && !hasDocstrings(array, i)) {
             index = i;
 
             // get param names and store in an array
