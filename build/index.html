@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <link rel="stylesheet" type="text/css" href="style.css" />
+    <title>Hello World Plugin</title>
+  </head>
+  <body>
+    <!-- <style type="text/css" media="screen">
+      .button-container {
+        display: grid;
+        grid-column: 1fr;
+      }
+    </style> -->
+    </body>
+    <div class="button-container">
+      <button class="btn btn-danger capitalize" onclick="addAllDocstrings()">
+        add docstrings to all keywords
+      </button>
+      <p class="hr capitalize">add docstrings to one keyword </p>
+      <button
+        class="btn btn-warning"
+        onclick="addOneDocstring(`pragma solidity`)"
+      >
+        Pragma add docstrings
+      </button>
+      <button class="btn btn-primary" onclick="addOneDocstring(`contract `)">
+        Contract add docstrings
+      </button>
+      <button class="btn btn-success" onclick="addOneDocstring(`constructor`)">
+        Constructor add docstrings
+      </button>
+      <button class="btn btn-info" onclick="addOneDocstring(`function `)">
+        Functions add docstrings
+      </button>
+      <button
+        class="btn btn-secondary"
+        onclick="addOneDocstring(`function ()`)"
+      >
+        Fallback add docstrings
+      </button>
+    </div>
+    <br><br>
+
+    <div class="popup-message">
+        <!-- <p class="hr">Message Area</p> -->
+        <div
+          class="alert alert-success alert-dismissible fade show"
+          role="alert"
+        >
+          <h4 class="alert-heading">File Content Not Changed!</h4>
+          <p>
+            Your current file content is not changed by the plagin. The reason
+            could be following:
+          </p>
+          <ul>
+            <li>
+              The plugin only looks for the keyword from ["pragma solidity",
+              "contract ", "constructor ", "function ", "function ()"]
+            </li>
+            <li>
+              You cancel content altering before it finished.
+            </li>
+            <li>
+              Other reasons?
+            </li>
+          </ul>
+          <button
+            type="button"
+            class="close"
+            aria-label="Close"
+            id="closeButton"
+            >
+            <!-- class="close"
+            data-dismiss="alert"
+            aria-label="Close" -->
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+      </div>
+
+    <script src="https://unpkg.com/remix-plugin"></script>
+    <script>
+      const showPopupMessage = ()=>{document.querySelector(".popup-message").style.display = "block"};
+      const hidePopupMessage = ()=>{document.querySelector(".popup-message").style.display = "none"};
+      document.querySelector('#closeButton').addEventListener("click",()=>hidePopupMessage())
+      const { createIframeClient } = remixPlugin;
+      const client = createIframeClient({
+        devMode: { port: 8080 }
+      });
+      const FunctionDocstings = ["/**", " *@dev: ", " */"];
+      const ConstantDocstrings = new Map([
+        [
+          "pragma solidity",
+          ["/**", " *Created on: ", " *@Summary: ", " *@Author: ", " */"]
+        ],
+        ["contract ", ["/**", " *@title:", " */"]],
+        ["function ()", ["/**", " *@dev: fallback function. ", " */"]]
+      ]);
+
+      // Button (add docstrings to all keywords) call this function
+      async function addAllDocstrings() {
+        await client.onload();
+        const fileName = await client.call("fileManager", "getCurrentFile");
+        const originalContent = await client.call(
+          "fileManager",
+          "getFile",
+          fileName
+        );
+        client
+          .call("fileManager", "getFile", fileName)
+          .then(fileContent => {
+            return addDocstringToAll(fileContent);
+          })
+          .then(newContent => {
+            if (newContent === originalContent) {
+              console.log("The content doesn't change.");
+              showPopupMessage()
+              return;
+            } else {
+              return client.call(
+                "fileManager",
+                "setFile",
+                fileName,
+                newContent
+              );
+            }
+          })
+          .catch(error => console.log(error));
+      }
+
+      // a function for adding one docstrings to different keywords
+      async function addOneDocstring(keyword) {
+        await client.onload();
+        const fileName = await client.call("fileManager", "getCurrentFile");
+        const originalContent = await client.call(
+          "fileManager",
+          "getFile",
+          fileName
+        );
+        client
+          .call("fileManager", "getFile", fileName)
+          .then(fileContent => {
+            if (ConstantDocstrings.has(keyword)) {
+              return addConstantDocstrings(fileContent, keyword);
+            } else if (keyword === "function " || keyword === "constructor") {
+              return addVaryingDocstrings(fileContent, keyword);
+            } else {
+              //this path means the entered keyword is not recognized
+              return fileContent;
+            }
+          })
+          .then(newContent => {
+            if (originalContent === newContent) {
+              console.log("The content doesn't change.");
+              showPopupMessage()
+              return;
+            } else {
+              return client.call(
+                "fileManager",
+                "setFile",
+                fileName,
+                newContent
+              );
+            }
+          })
+          .catch(error => console.log(error));
+      }
+
+      function addDocstringToAll(fileString) {
+        let contentArray = addConstantDocstrings(fileString, "pragma solidity");
+        contentArray = addConstantDocstrings(contentArray, "contract ");
+        contentArray = addConstantDocstrings(contentArray, "function ()");
+        contentArray = addVaryingDocstrings(contentArray, "function ");
+        return addVaryingDocstrings(contentArray, "constructor");
+      }
+
+      // @dev this is a function for adding docstring to 'pragma solidity', 'contract ', and 'function ()’
+      // @param string, the file content
+      // @param keyword, it can be one of them in ['pragma solidity', 'contract ', 'function ()’]
+      // @param docstrings, the docstrings will be added to the content
+      function addConstantDocstrings(fileString, keyword) {
+        const originalArray = fileString.split("\n");
+        let array = originalArray;
+
+        let index = -1; //the keyword index in the array
+        for (let i = 0; i < array.length; i++) {
+          const element = array[i];
+
+          if (element.includes(keyword) && !hasDocstrings(array, i)) {
+            index = i;
+            array = [
+              ...array.slice(0, index),
+              ...ConstantDocstrings.get(keyword),
+              ...array.slice(index)
+            ];
+          }
+        }
+        if (index === -1) {
+          return arrayToContent(originalArray); //if index === -1, it means the keyword is not included in the file content
+        }
+        return arrayToContent(array);
+      }
+
+      // @dev this is a function for adding docstring to 'constructor' and 'function '
+      // @param array, the file content
+      // @param keyword, it can be one of them in ['constructor', 'function ']
+      function addVaryingDocstrings(fileString, keyword) {
+        const originalArray = fileString.split("\n");
+        let array = originalArray;
+
+        let index = -1;
+        for (let i = 0; i < array.length; i++) {
+          const element = array[i];
+          //varying docstrings only adds to function, not Fallback function, that's why we need to check !element.includes('function ()')
+          if (element.includes(keyword) && !element.includes('function ()') && !hasDocstrings(array, i)) {
+            index = i;
+
+            // get param names and store in an array
+            let string = array[index];
+            for (let i = index; i < array.length; i++) {
+              if (string.includes("(") && string.includes(")")) {
+                break;
+              } else {
+                string += array[i + 1];
+              }
+            }
+            const paramStart = string.indexOf("(");
+            const paramEnd = string.indexOf(")");
+            paramArray = string
+              .substring(paramStart + 1, paramEnd)
+              .split(",")
+              .map(item => " *@param " + item.trim() + ": ");
+
+            // insert param names array into docstrings
+            let docstrings = [
+              FunctionDocstings[0],
+              FunctionDocstings[1],
+              ...paramArray,
+              FunctionDocstings[2]
+            ];
+
+            // whether 'returns' keyword exist in this function
+            let functionDeclaration = array[index];
+            for (let i = index; i < array.length; i++) {
+              if (functionDeclaration.includes("{")) {
+                break;
+              } else {
+                functionDeclaration += array[i + 1];
+              }
+            }
+
+            const returnsIndex = functionDeclaration.indexOf("returns");
+            functionDeclaration = functionDeclaration.substring(returnsIndex);
+            const returnsStart = functionDeclaration.indexOf("(");
+            const returnsEnd = functionDeclaration.indexOf(")");
+            const returnsArray = functionDeclaration
+              .substring(returnsStart + 1, returnsEnd)
+              .split(",")
+              .map(item => " *@return " + item.trim() + ": ");
+
+            // insert returns to docstrings
+            const length = docstrings.length;
+            if (functionDeclaration.includes("returns")) {
+              docstrings = [
+                ...docstrings.slice(0, length - 1),
+                ...returnsArray,
+                docstrings[docstrings.length - 1]
+              ];
+            }
+
+            // insert docstrings into array and go to next loop
+            array = [
+              ...array.slice(0, index),
+              ...docstrings,
+              ...array.slice(index)
+            ];
+          }
+        }
+        if (index === -1) {
+          return arrayToContent(originalArray); //if index === -1, it means the keyword is not included in the file content
+        }
+
+        return arrayToContent(array);
+      }
+
+      //------------ utils ---------------//
+      //@dev this function is to use to check if an element at index in the array already has docstrings in front.
+      function hasDocstrings(arr, index) {
+        if (index === 0) return false; //avoid under border exception.
+        if (arr[index - 1].includes("*/")) return true;
+        return false;
+      }
+
+      function arrayToContent(array) {
+        return array.reduce((a, b) => a + "\n" + b);
+      }
+    </script>
+  </body>
+</html>
