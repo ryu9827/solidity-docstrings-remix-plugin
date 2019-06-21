@@ -185,15 +185,18 @@
         const originalArray = fileString.split("\n");
         let array = originalArray;
 
-        let index = -1; //the keyword index in the array
+        let index = -1; //the keyword index in the array, default to -1 means not find any keyword without docstrings
         for (let i = 0; i < array.length; i++) {
           const element = array[i];
 
           if (element.includes(keyword) && !hasDocstrings(array, i)) {
             index = i;
+            const indent = countSpaceIndent(element);
             array = [
               ...array.slice(0, index),
-              ...ConstantDocstrings.get(keyword),
+              ...ConstantDocstrings.get(keyword).map(
+                item => " ".repeat(indent) + item
+              ), //adding indents to each line of docstrings
               ...array.slice(index)
             ];
           }
@@ -217,7 +220,7 @@
           //varying docstrings only adds to function, not Fallback function, that's why we need to check !element.includes('function ()')
           if (element.includes(keyword) && !element.includes('function ()') && !hasDocstrings(array, i)) {
             index = i;
-
+            const indent = countSpaceIndent(element);
             // get param names and store in an array
             let string = array[index];
             for (let i = index; i < array.length; i++) {
@@ -274,7 +277,7 @@
             // insert docstrings into array and go to next loop
             array = [
               ...array.slice(0, index),
-              ...docstrings,
+              ...docstrings.map(item => " ".repeat(indent) + item), //adding indents to each line of docstrings,
               ...array.slice(index)
             ];
           }
@@ -296,6 +299,14 @@
 
       function arrayToContent(array) {
         return array.reduce((a, b) => a + "\n" + b);
+      }
+      function countSpaceIndent(string) {
+        let counter = 0;
+        while (string.charAt(0) === " ") {
+          counter += 1;
+          string = string.substring(1);
+        }
+        return counter;
       }
     </script>
   </body>

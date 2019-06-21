@@ -80,15 +80,18 @@ function addConstantDocstrings(fileString, keyword) {
   const originalArray = fileString.split("\n");
   let array = originalArray;
 
-  let index = -1; //the keyword index in the array
+  let index = -1; //the keyword index in the array, default to -1 means not find any keyword without docstrings
   for (let i = 0; i < array.length; i++) {
     const element = array[i];
 
     if (element.includes(keyword) && !hasDocstrings(array, i)) {
       index = i;
+      const indent = countSpaceIndent(element);
       array = [
         ...array.slice(0, index),
-        ...ConstantDocstrings.get(keyword),
+        ...ConstantDocstrings.get(keyword).map(
+          item => " ".repeat(indent) + item
+        ), //adding indents to each line of docstrings
         ...array.slice(index)
       ];
     }
@@ -99,9 +102,9 @@ function addConstantDocstrings(fileString, keyword) {
   return arrayToContent(array);
 }
 
-// @dev this is a function for adding docstring to 'constructor' and 'function'
+// @dev this is a function for adding docstring to 'constructor' and 'function '
 // @param array, the file content
-// @param keyword, it can be one of them in ['constructor', 'function']
+// @param keyword, it can be one of them in ['constructor', 'function ']
 function addVaryingDocstrings(fileString, keyword) {
   const originalArray = fileString.split("\n");
   let array = originalArray;
@@ -109,9 +112,14 @@ function addVaryingDocstrings(fileString, keyword) {
   let index = -1;
   for (let i = 0; i < array.length; i++) {
     const element = array[i];
-    if (element.includes(keyword) && !hasDocstrings(array, i)) {
+    //varying docstrings only adds to function, not Fallback function, that's why we need to check !element.includes('function ()')
+    if (
+      element.includes(keyword) &&
+      !element.includes("function ()") &&
+      !hasDocstrings(array, i)
+    ) {
       index = i;
-
+      const indent = countSpaceIndent(element);
       // get param names and store in an array
       let string = array[index];
       for (let i = index; i < array.length; i++) {
@@ -166,7 +174,11 @@ function addVaryingDocstrings(fileString, keyword) {
       }
 
       // insert docstrings into array and go to next loop
-      array = [...array.slice(0, index), ...docstrings, ...array.slice(index)];
+      array = [
+        ...array.slice(0, index),
+        ...docstrings.map(item => " ".repeat(indent) + item), //adding indents to each line of docstrings,
+        ...array.slice(index)
+      ];
     }
   }
   if (index === -1) {
@@ -186,6 +198,15 @@ function hasDocstrings(arr, index) {
 
 function arrayToContent(array) {
   return array.reduce((a, b) => a + "\n" + b);
+}
+
+function countSpaceIndent(string) {
+  let counter = 0;
+  while (string.charAt(0) === " ") {
+    counter += 1;
+    string = string.substring(1);
+  }
+  return counter;
 }
 //@dev utils function to deal with each line in the file content. So that we can see if this line includes keyword.
 // function removeSpaceBetweenWords(string) {

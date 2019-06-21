@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "product": "cp -Ri ./src/public/* ./build",
-    "build": "npx babel src --out-dir build",
+    "build": "npx babel src/public --out-dir build",
     "start": "npm run build && node build/index.js"
   },
   "keywords": [],
