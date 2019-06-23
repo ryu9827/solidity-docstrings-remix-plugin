@@ -1,16 +1,16 @@
 # Solidity Docstrings Remix-plugin
 
 This plugin is developed for [Ethereum Remix online IDE](http://remix.ethereum.org/#optimize=false&evmVersion=null).<br>
-You can get connect from this url https://solidity-docstrings-remix-plugin.netlify.com/ <br>
+You can get connection from this url https://solidity-docstrings-remix-plugin.netlify.com/ <br>
 Final effect:
 <br>
 <img src="images/final_effect.png" width="90%" >
 
-# How connect your Remix to the Plugin ?
+# How to connect your Remix to the Plugin ?
 
-step 1 click Button<br>
+step 1 click the button<br>
 <img src="images/step1.png" width="60%" ><br><br>
-step 2 connect to local plugin<br>
+step 2 click "connect to a local plugin" (but actually we are connecting to an online port providing the plugin)<br>
 <img src="images/step2.png" width="60%" ><br><br>
 step 3 give it a name and port(url)<br>
 <img src="images/step3.png" width="60%" ><br><br>

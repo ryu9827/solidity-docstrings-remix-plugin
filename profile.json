@@ -1,0 +1,8 @@
+{
+  "name": "solidityDocstrings",
+  "displayName": "Solidity Docstrings",
+  "description": "Add docstrings to your current solidity source code.",
+  "url": "https://solidity-docstrings-remix-plugin.netlify.com/",
+  "icon": "build/icon.png",
+  "location": "sidePanel"
+}
